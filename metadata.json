@@ -1,0 +1,9 @@
+{
+  "name": "Remix: LittleBabli",
+  "description": "A safe, aesthetic, and emotionally supportive digital diary designed specifically for women to express thoughts, track moods, and practice self-love.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}

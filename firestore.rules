@@ -1,0 +1,143 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "apurvkashyap427@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidOptionalString(data, field, maxLen) {
+      return !(field in data) || (data[field] is string && data[field].size() <= maxLen);
+    }
+
+    function isValidOptionalBool(data, field) {
+      return !(field in data) || (data[field] is bool);
+    }
+
+    function isValidOptionalList(data, field, maxSize) {
+      return !(field in data) || (data[field] is list && data[field].size() <= maxSize);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'email', 'name', 'journalPassword', 'createdAt', 'preferences']) &&
+             data.uid is string && 
+             data.email is string && isValidEmail(data.email) &&
+             data.name is string && data.name.size() < 100 &&
+             isValidOptionalString(data, 'journalPassword', 100) &&
+             (!( 'createdAt' in data ) || (data.createdAt is string || data.createdAt is timestamp)) &&
+             (!( 'preferences' in data ) || (data.preferences is map));
+    }
+
+    function isValidJournal(data) {
+      return hasOnlyAllowedFields(['userId', 'title', 'content', 'mood', 'tags', 'isLocked', 'isPinned', 'pinHash', 'images', 'createdAt', 'updatedAt']) &&
+             data.userId is string && 
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.content is string && data.content.size() < 100000 && // Increased for base64 images
+             data.mood is string &&
+             data.tags is list && data.tags.size() <= 20 &&
+             data.isLocked is bool &&
+             isValidOptionalBool(data, 'isPinned') &&
+             isValidOptionalString(data, 'pinHash', 100) &&
+             isValidOptionalList(data, 'images', 50) &&
+             isValidOptionalString(data, 'createdAt', 50) &&
+             isValidOptionalString(data, 'updatedAt', 50);
+    }
+
+    function isValidMoodLog(data) {
+      return hasOnlyAllowedFields(['userId', 'date', 'mood', 'createdAt']) &&
+             data.userId is string && 
+             data.date is string && data.date.matches("^\\d{4}-\\d{2}-\\d{2}$") &&
+             data.mood is string &&
+             (!( 'createdAt' in data ) || (data.createdAt is string || data.createdAt is timestamp));
+    }
+
+    function isValidHabit(data) {
+      return hasOnlyAllowedFields(['userId', 'name', 'icon', 'frequency', 'completedDates', 'createdAt']) &&
+             data.userId is string && 
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.icon is string &&
+             data.frequency in ['daily', 'weekly'] &&
+             data.completedDates is list && data.completedDates.size() <= 1000 &&
+             isValidOptionalString(data, 'createdAt', 50);
+    }
+
+    function isValidVisionGoal(data) {
+      return hasOnlyAllowedFields(['userId', 'title', 'category', 'isCompleted', 'description', 'imageUrl', 'targetDate', 'createdAt']) &&
+             data.userId is string && 
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.category in ['Personal', 'Career', 'Health', 'Travel', 'Creative'] &&
+             data.isCompleted is bool &&
+             isValidOptionalString(data, 'description', 2000) &&
+             isValidOptionalString(data, 'imageUrl', 100000) && // Increased for base64
+             isValidOptionalString(data, 'targetDate', 50) &&
+             isValidOptionalString(data, 'createdAt', 50);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data);
+    }
+
+    match /journals/{journalId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidJournal(request.resource.data);
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && isValidJournal(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /moodLogs/{logId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidMoodLog(request.resource.data);
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && isValidMoodLog(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /affirmations/{affirmationId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /habits/{habitId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidHabit(request.resource.data);
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && isValidHabit(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /visionGoals/{goalId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidVisionGoal(request.resource.data);
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && isValidVisionGoal(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+  }
+}

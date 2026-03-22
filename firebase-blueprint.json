@@ -1,0 +1,122 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and preferences",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "journalPassword": { "type": "string", "description": "Optional password for journal privacy" },
+        "preferences": {
+          "type": "object",
+          "properties": {
+            "theme": { "type": "string", "enum": ["light", "dark"] },
+            "reminders": { "type": "boolean" },
+            "privacy": { "type": "boolean" }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Journal": {
+      "title": "Journal",
+      "description": "A personal journal entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "mood": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "isLocked": { "type": "boolean" },
+        "isPinned": { "type": "boolean" },
+        "pinHash": { "type": "string" },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "content", "createdAt"]
+    },
+    "MoodLog": {
+      "title": "MoodLog",
+      "description": "Daily mood tracking",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "mood": { "type": "string" }
+      },
+      "required": ["userId", "date", "mood"]
+    },
+    "Affirmation": {
+      "title": "Affirmation",
+      "description": "Daily positive affirmations",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "category": { "type": "string" }
+      },
+      "required": ["text"]
+    },
+    "Habit": {
+      "title": "Habit",
+      "description": "Daily self-care rituals",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "icon": { "type": "string" },
+        "frequency": { "type": "string", "enum": ["daily", "weekly"] },
+        "completedDates": { "type": "array", "items": { "type": "string", "format": "date" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "icon"]
+    },
+    "VisionGoal": {
+      "title": "VisionGoal",
+      "description": "A goal for the vision board",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "category": { "type": "string", "enum": ["Personal", "Career", "Health", "Travel", "Creative"] },
+        "targetDate": { "type": "string", "format": "date" },
+        "isCompleted": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "category"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/journals/{journalId}": {
+      "schema": "Journal",
+      "description": "Journal entries"
+    },
+    "/moodLogs/{logId}": {
+      "schema": "MoodLog",
+      "description": "Mood logs"
+    },
+    "/affirmations/{affirmationId}": {
+      "schema": "Affirmation",
+      "description": "Affirmations"
+    },
+    "/habits/{habitId}": {
+      "schema": "Habit",
+      "description": "Self-care rituals"
+    },
+    "/visionGoals/{goalId}": {
+      "schema": "VisionGoal",
+      "description": "Vision board goals"
+    }
+  }
+}
