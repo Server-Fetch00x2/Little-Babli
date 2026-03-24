@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { User, Check, Sparkles, LogOut } from 'lucide-react';
+import { User, Check, Sparkles, LogOut, Download, ShieldCheck } from 'lucide-react';
 import { Card } from './components/ui/Card';
 import { Button } from './components/ui/Button';
 import { Input } from './components/ui/Input';
 import { auth, db } from './lib/firebase';
 import { updateProfile } from 'firebase/auth';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from './lib/error-handler';
 import { UserProfile } from './types';
 
@@ -15,6 +15,7 @@ export const Settings = () => {
   const [displayName, setDisplayName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -107,6 +108,58 @@ export const Settings = () => {
     }
   };
 
+  const handleDownloadData = async () => {
+    if (!auth.currentUser) return;
+    setIsDownloading(true);
+
+    try {
+      const uid = auth.currentUser.uid;
+      const q = query(collection(db, 'journals'), where('userId', '==', uid));
+      const querySnapshot = await getDocs(q);
+      
+      const journals = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      let textContent = `LITTLE BABLI - MY JOURNAL BACKUP\n`;
+      textContent += `Exported on: ${new Date().toLocaleString()}\n`;
+      textContent += `Total Entries: ${journals.length}\n`;
+      textContent += `==========================================\n\n`;
+
+      journals.forEach((entry: any, index: number) => {
+        // Strip HTML tags and decode entities for clean text
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = entry.content;
+        const cleanContent = tempDiv.textContent || tempDiv.innerText || "";
+
+        textContent += `ENTRY #${journals.length - index}\n`;
+        textContent += `Title: ${entry.title}\n`;
+        textContent += `Date: ${new Date(entry.createdAt).toLocaleString()}\n`;
+        textContent += `Mood: ${entry.mood}\n`;
+        textContent += `Tags: ${entry.tags.join(', ') || 'None'}\n`;
+        textContent += `------------------------------------------\n`;
+        textContent += `${cleanContent}\n`;
+        textContent += `\n==========================================\n\n`;
+      });
+
+      const blob = new Blob([textContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `LittleBabli_MyNotes_${new Date().toISOString().split('T')[0]}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Download Error:", error);
+      alert("Something went wrong while downloading your notes. Please try again.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <header>
@@ -189,6 +242,28 @@ export const Settings = () => {
               </motion.span>
               <span className="text-sm font-serif italic text-lavender-600 font-bold">by Deepak</span>
             </motion.div>
+          </div>
+        </Card>
+
+        <Card className="border-emerald-100 bg-emerald-50/20">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-medium text-emerald-900 flex items-center gap-2">
+                <ShieldCheck size={20} className="text-emerald-500" />
+                Data Reliability
+              </h3>
+              <p className="text-sm text-emerald-600/70 mt-1">
+                Your data is stored securely in the cloud, but you can always keep a local copy for your peace of mind.
+              </p>
+            </div>
+            <Button 
+              onClick={handleDownloadData}
+              disabled={isDownloading}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-2"
+            >
+              <Download size={18} />
+              {isDownloading ? 'Preparing...' : 'Download My Data'}
+            </Button>
           </div>
         </Card>
 
