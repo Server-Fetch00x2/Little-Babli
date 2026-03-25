@@ -3,6 +3,7 @@ export interface UserProfile {
   name: string;
   email: string;
   journalPassword?: string;
+  accessPassword?: string; // New field for security gate
   preferences: {
     theme: 'light' | 'dark';
     reminders: boolean;

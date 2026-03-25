@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { User, Check, Sparkles, LogOut, Download, ShieldCheck } from 'lucide-react';
+import { User, Check, Sparkles, LogOut, Download, ShieldCheck, Lock } from 'lucide-react';
 import { Card } from './components/ui/Card';
 import { Button } from './components/ui/Button';
 import { Input } from './components/ui/Input';
@@ -16,6 +16,9 @@ export const Settings = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [newAccessPassword, setNewAccessPassword] = useState('');
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -97,6 +100,25 @@ export const Settings = () => {
       handleFirestoreError(error, OperationType.UPDATE, `users/${auth.currentUser.uid}`);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!auth.currentUser || !newAccessPassword.trim() || newAccessPassword.length < 4) return;
+    setIsSavingPassword(true);
+    setPasswordSuccess(false);
+    
+    try {
+      await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+        accessPassword: newAccessPassword.trim()
+      });
+      setPasswordSuccess(true);
+      setNewAccessPassword('');
+      setTimeout(() => setPasswordSuccess(false), 3000);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${auth.currentUser.uid}`);
+    } finally {
+      setIsSavingPassword(false);
     }
   };
 
@@ -242,6 +264,42 @@ export const Settings = () => {
               </motion.span>
               <span className="text-sm font-serif italic text-lavender-600 font-bold">by Deepak</span>
             </motion.div>
+          </div>
+        </Card>
+
+        <Card>
+          <h3 className="text-lg font-medium mb-6 flex items-center gap-2">
+            <Lock size={20} className="text-lavender-500" />
+            Security Password
+          </h3>
+          <p className="text-sm text-slate-500 mb-6 italic">
+            This password is required every time you log in to keep your sanctuary private.
+          </p>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">Change Security Password</label>
+              <div className="flex gap-2">
+                <Input 
+                  type="password"
+                  value={newAccessPassword} 
+                  onChange={(e) => setNewAccessPassword(e.target.value)}
+                  placeholder="Enter new 4+ digit password"
+                  className="flex-1"
+                />
+                <Button 
+                  onClick={handleUpdatePassword} 
+                  disabled={isSavingPassword || newAccessPassword.length < 4}
+                  className="shrink-0"
+                >
+                  {isSavingPassword ? 'Updating...' : passwordSuccess ? <Check size={18} /> : 'Update'}
+                </Button>
+              </div>
+              {passwordSuccess && <p className="text-emerald-500 text-xs mt-2">Security password updated!</p>}
+              {newAccessPassword && newAccessPassword.length < 4 && (
+                <p className="text-amber-500 text-[10px] mt-1 italic">Password must be at least 4 characters.</p>
+              )}
+            </div>
           </div>
         </Card>
 

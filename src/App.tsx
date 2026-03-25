@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp, getDocFromServer } from 'firebase/firestore';
 import { auth, db } from './lib/firebase';
-import { collection, query, where, limit, getDocs, orderBy } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from './lib/error-handler';
 import { Layout } from './components/Layout';
+import { SecurityGate } from './components/SecurityGate';
 import { Home } from './Home';
 import { Journal } from './Journal';
 import { JournalEditor } from './JournalEditor';
@@ -60,22 +60,6 @@ export default function App() {
           }
         } catch (error) {
           handleFirestoreError(error, OperationType.WRITE, `users/${u.uid}`);
-        }
-
-        // Fetch latest mood
-        try {
-          const q = query(
-            collection(db, 'moodLogs'),
-            where('userId', '==', u.uid),
-            orderBy('createdAt', 'desc'),
-            limit(1)
-          );
-          const querySnapshot = await getDocs(q);
-          if (!querySnapshot.empty) {
-            setSelectedMood(querySnapshot.docs[0].data().mood);
-          }
-        } catch (error) {
-          handleFirestoreError(error, OperationType.GET, 'moodLogs');
         }
       }
       setLoading(false);
@@ -144,9 +128,11 @@ export default function App() {
   };
 
   return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
-      {renderContent()}
-    </Layout>
+    <SecurityGate user={user}>
+      <Layout activeTab={activeTab} setActiveTab={setActiveTab} user={user}>
+        {renderContent()}
+      </Layout>
+    </SecurityGate>
   );
 }
 

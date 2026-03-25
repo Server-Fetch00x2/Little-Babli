@@ -9,6 +9,7 @@
         "name": { "type": "string" },
         "email": { "type": "string", "format": "email" },
         "journalPassword": { "type": "string", "description": "Optional password for journal privacy" },
+        "accessPassword": { "type": "string", "description": "Security password for app access" },
         "preferences": {
           "type": "object",
           "properties": {

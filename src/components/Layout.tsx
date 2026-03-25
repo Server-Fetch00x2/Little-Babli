@@ -25,17 +25,15 @@ interface LayoutProps {
   children: React.ReactNode;
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  user: User | null;
 }
 
-export const Layout = ({ children, activeTab, setActiveTab }: LayoutProps) => {
-  const [user, setUser] = useState<User | null>(null);
+export const Layout = ({ children, activeTab, setActiveTab, user }: LayoutProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const [showSurprise, setShowSurprise] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
-    
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
@@ -44,7 +42,6 @@ export const Layout = ({ children, activeTab, setActiveTab }: LayoutProps) => {
 
     window.addEventListener('resize', handleResize);
     return () => {
-      unsubscribe();
       window.removeEventListener('resize', handleResize);
     };
   }, []);
