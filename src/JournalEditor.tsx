@@ -19,23 +19,31 @@ import {
   AlignRight,
   Bold,
   Italic,
+  Underline,
+  Strikethrough,
+  Palette,
+  Link as LinkIcon,
+  Quote,
+  Type as TypeIcon,
   List as ListIcon,
   Heading1,
   Heading2,
-  Heading3
+  Heading3,
+  Eraser,
+  Code
 } from 'lucide-react';
 import { Button } from './components/ui/Button';
 import { Input, TextArea } from './components/ui/Input';
 import { Card } from './components/ui/Card';
-import { JournalEntry, MOODS, UserProfile } from './types';
+import { JournalEntry, UserProfile } from './types';
 import { db, auth } from './lib/firebase';
 import { collection, addDoc, updateDoc, doc, getDoc } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from './lib/error-handler';
 import ReactQuill from 'react-quill-new';
-import { clsx } from 'clsx';
 import { format } from 'date-fns';
 import { PasswordModal } from './components/PasswordModal';
 import { jsPDF } from 'jspdf';
+import { clsx } from 'clsx';
 
 export const JournalEditor = ({ 
   entry, 
@@ -46,12 +54,12 @@ export const JournalEditor = ({
 }) => {
   const [title, setTitle] = useState(entry?.title || '');
   const [content, setContent] = useState(entry?.content || '');
-  const [mood, setMood] = useState(entry?.mood || 'Peaceful');
   const [tags, setTags] = useState<string[]>(entry?.tags || []);
   const [tagInput, setTagInput] = useState('');
   const [isLocked, setIsLocked] = useState(entry?.isLocked || false);
   const [isPinned, setIsPinned] = useState(entry?.isPinned || false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPreview, setIsPreview] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -92,7 +100,6 @@ export const JournalEditor = ({
       userId: auth.currentUser.uid,
       title,
       content,
-      mood,
       tags,
       isLocked,
       isPinned,
@@ -167,6 +174,12 @@ export const JournalEditor = ({
             const range = quill.getSelection();
             if (range) {
               quill.insertEmbed(range.index, 'image', base64String);
+              // Set default width to 100%
+              const [img] = quill.root.querySelectorAll(`img[src="${base64String}"]`);
+              if (img) {
+                (img as HTMLElement).style.width = '100%';
+                (img as HTMLElement).style.borderRadius = '1rem';
+              }
             }
           }
         };
@@ -176,14 +189,44 @@ export const JournalEditor = ({
     input.click();
   };
 
-  const modules = {
+  // Simple image resize handler
+  useEffect(() => {
+    const quill = quillRef.current?.getEditor();
+    if (!quill) return;
+
+    const handleImageClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'IMG') {
+        // Remove selection from other images
+        quill.root.querySelectorAll('img').forEach(img => img.classList.remove('ql-selected'));
+        target.classList.add('ql-selected');
+
+        // Show a simple prompt for resizing
+        const size = prompt('Enter image width (e.g., 25%, 50%, 100%, or 300px):', target.style.width || '100%');
+        if (size) {
+          target.style.width = size;
+        }
+      } else {
+        quill.root.querySelectorAll('img').forEach(img => img.classList.remove('ql-selected'));
+      }
+    };
+
+    quill.root.addEventListener('click', handleImageClick);
+    return () => quill.root.removeEventListener('click', handleImageClick);
+  }, [quillRef.current]);
+
+  const modules = React.useMemo(() => ({
     toolbar: {
       container: "#toolbar",
     },
-  };
+    clipboard: {
+      matchVisual: false,
+    }
+  }), []);
 
   const formats = [
-    'header', 'bold', 'italic', 'list', 'image', 'align'
+    'header', 'bold', 'italic', 'underline', 'strike', 'list', 'indent',
+    'image', 'align', 'color', 'background', 'link', 'blockquote', 'code-block'
   ];
 
   const downloadPDF = async () => {
@@ -208,7 +251,7 @@ export const JournalEditor = ({
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(10);
       pdf.setTextColor(148, 163, 184); // slate-400
-      const dateStr = `${format(new Date(), 'MMMM dd, yyyy')} • ${mood}`;
+      const dateStr = `${format(new Date(), 'MMMM dd, yyyy')}`;
       pdf.text(dateStr, margin, currentY);
       
       currentY += 15;
@@ -266,6 +309,14 @@ export const JournalEditor = ({
           >
             {isPinned ? <Pin size={20} /> : <PinOff size={20} />}
           </Button>
+          <Button 
+            variant="ghost" 
+            onClick={() => setIsPreview(!isPreview)}
+            className={isPreview ? "text-lavender-600" : "text-slate-400"}
+            title={isPreview ? "Edit Mode" : "Preview Mode"}
+          >
+            {isPreview ? <EyeOff size={20} /> : <Eye size={20} />}
+          </Button>
           <Button variant="outline" onClick={downloadPDF} className="gap-2 hidden md:flex">
             <Download size={18} /> PDF
           </Button>
@@ -279,7 +330,7 @@ export const JournalEditor = ({
         <div className="lg:col-span-2 space-y-6">
           <div className="p-8 bg-white rounded-3xl shadow-sm border border-lavender-100 lg:border-none lg:bg-transparent lg:p-0 lg:shadow-none">
             <div className="mb-4 text-xs text-slate-400 font-medium uppercase tracking-widest">
-              {format(new Date(), 'MMMM dd, yyyy')} • {mood}
+              {format(new Date(), 'MMMM dd, yyyy')}
             </div>
             <Input 
               placeholder="Title of your memory..." 
@@ -289,38 +340,87 @@ export const JournalEditor = ({
             />
 
             {/* Custom Toolbar */}
-            <div id="toolbar" className="flex items-center gap-1 py-2 border-y border-lavender-100 mb-4 overflow-x-auto scrollbar-hide bg-white/50 backdrop-blur-sm sticky top-[72px] z-[5]">
-              <button className="ql-bold p-2 hover:bg-lavender-50 rounded-lg text-slate-600 transition-colors" title="Bold">
-                <Bold size={18} />
-              </button>
-              <button className="ql-italic p-2 hover:bg-lavender-50 rounded-lg text-slate-600 transition-colors" title="Italic">
-                <Italic size={18} />
-              </button>
-              <div className="w-px h-4 bg-lavender-100 mx-1" />
-              <button className="ql-header p-2 hover:bg-lavender-50 rounded-lg text-slate-600 transition-colors" value="1" title="Heading 1">
-                <Heading1 size={18} />
-              </button>
-              <button className="ql-header p-2 hover:bg-lavender-50 rounded-lg text-slate-600 transition-colors" value="2" title="Heading 2">
-                <Heading2 size={18} />
-              </button>
-              <div className="w-px h-4 bg-lavender-100 mx-1" />
-              <button className="ql-list p-2 hover:bg-lavender-50 rounded-lg text-slate-600 transition-colors" value="ordered" title="Ordered List">
-                <ListIcon size={18} />
-              </button>
-              <button className="ql-list p-2 hover:bg-lavender-50 rounded-lg text-slate-600 transition-colors" value="bullet" title="Bullet List">
-                <ListIcon size={18} className="rotate-180" />
-              </button>
-              <div className="w-px h-4 bg-lavender-100 mx-1" />
-              <button 
-                onClick={handleImageUpload}
-                className="p-2 hover:bg-lavender-50 rounded-lg text-slate-600 flex items-center gap-2 text-sm whitespace-nowrap"
-                title="Insert Image"
-              >
-                <ImageIcon size={18} className="text-lavender-500" />
-              </button>
-            </div>
+            {!isPreview && (
+              <div id="toolbar" className="flex items-center gap-1 py-2 border-y border-lavender-100 mb-4 overflow-x-auto scrollbar-hide bg-white/50 backdrop-blur-sm sticky top-[72px] z-[5] px-2">
+                <button className="ql-bold w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" title="Bold">
+                  <Bold size={18} />
+                </button>
+                <button className="ql-italic w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" title="Italic">
+                  <Italic size={18} />
+                </button>
+                <button className="ql-underline w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" title="Underline">
+                  <Underline size={18} />
+                </button>
+                <button className="ql-strike w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" title="Strikethrough">
+                  <Strikethrough size={18} />
+                </button>
+                
+                <div className="w-px h-6 bg-lavender-100 mx-1" />
+                
+                <div className="flex items-center gap-1">
+                  <select className="ql-color !w-8 !h-8 !p-0 border-none bg-transparent cursor-pointer" title="Text Color" />
+                  <select className="ql-background !w-8 !h-8 !p-0 border-none bg-transparent cursor-pointer" title="Background Color" />
+                </div>
+                
+                <div className="w-px h-6 bg-lavender-100 mx-1" />
+                
+                <button className="ql-header w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" value="1" title="Heading 1">
+                  <Heading1 size={18} />
+                </button>
+                <button className="ql-header w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" value="2" title="Heading 2">
+                  <Heading2 size={18} />
+                </button>
+                
+                <div className="w-px h-6 bg-lavender-100 mx-1" />
+                
+                <button className="ql-list w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" value="ordered" title="Ordered List">
+                  <ListIcon size={18} />
+                </button>
+                <button className="ql-list w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" value="bullet" title="Bullet List">
+                  <ListIcon size={18} className="rotate-180" />
+                </button>
+                
+                <div className="w-px h-6 bg-lavender-100 mx-1" />
 
-            <div className="editor-container min-h-[500px]">
+                <button className="ql-align w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" value="" title="Align Left">
+                  <AlignLeft size={18} />
+                </button>
+                <button className="ql-align w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" value="center" title="Align Center">
+                  <AlignCenter size={18} />
+                </button>
+                <button className="ql-align w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" value="right" title="Align Right">
+                  <AlignRight size={18} />
+                </button>
+
+                <div className="w-px h-6 bg-lavender-100 mx-1" />
+                
+                <button className="ql-blockquote w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" title="Quote">
+                  <Quote size={18} />
+                </button>
+                <button className="ql-code-block w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" title="Code Block">
+                  <Code size={18} />
+                </button>
+                <button className="ql-link w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" title="Link">
+                  <LinkIcon size={18} />
+                </button>
+                
+                <div className="w-px h-6 bg-lavender-100 mx-1" />
+                
+                <button 
+                  onClick={handleImageUpload}
+                  className="w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all"
+                  title="Insert Image"
+                >
+                  <ImageIcon size={18} className="text-lavender-500" />
+                </button>
+                
+                <button className="ql-clean w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" title="Clear Formatting">
+                  <Eraser size={18} />
+                </button>
+              </div>
+            )}
+
+            <div className={clsx("editor-container min-h-[500px]", isPreview && "preview-mode")}>
               <ReactQuill
                 ref={quillRef}
                 theme="snow"
@@ -328,6 +428,7 @@ export const JournalEditor = ({
                 onChange={setContent}
                 modules={modules}
                 formats={formats}
+                readOnly={isPreview}
                 placeholder="Write your heart out..."
                 className="font-sans text-lg leading-relaxed"
               />
@@ -344,29 +445,6 @@ export const JournalEditor = ({
         </div>
 
         <div className="space-y-6">
-          <Card className="bg-white border-2 border-lavender-100">
-            <h4 className="font-medium mb-4 flex items-center gap-2">
-              Mood
-            </h4>
-            <div className="grid grid-cols-2 gap-2">
-              {MOODS.map((m) => (
-                <button
-                  key={m.label}
-                  onClick={() => setMood(m.label)}
-                  className={clsx(
-                    "px-3 py-2 rounded-xl text-xs transition-all flex items-center gap-2",
-                    mood === m.label 
-                      ? "bg-lavender-500 text-white shadow-md" 
-                      : "bg-lavender-50 text-slate-600 hover:bg-lavender-100"
-                  )}
-                >
-                  <span>{m.emoji}</span>
-                  <span>{m.label}</span>
-                </button>
-              ))}
-            </div>
-          </Card>
-
           <Card className="bg-lavender-50/50 border-2 border-lavender-100">
             <h4 className="font-medium mb-4 flex items-center gap-2">
               <TagIcon size={18} className="text-lavender-500" />
@@ -426,11 +504,62 @@ export const JournalEditor = ({
           margin: 1.5rem auto;
           display: block;
           max-width: 100%;
+          cursor: pointer;
+          transition: transform 0.2s ease;
+        }
+        .ql-editor img:hover {
+          outline: 2px solid #8b5cf6;
+        }
+        .ql-editor img.ql-selected {
+          outline: 3px solid #8b5cf6;
+          transform: scale(0.98);
+        }
+        .ql-editor blockquote {
+          border-left: 4px solid #ddd6fe;
+          padding-left: 1rem;
+          font-style: italic;
+          color: #6d28d9;
+          margin: 1rem 0;
+        }
+        .ql-editor a {
+          color: #7c3aed;
+          text-decoration: underline;
+        }
+        .ql-editor pre.ql-syntax {
+          background-color: #f8fafc;
+          color: #334155;
+          padding: 1rem;
+          border-radius: 0.75rem;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+          font-size: 0.875rem;
+          margin: 1rem 0;
+          overflow-x: auto;
+        }
+        .preview-mode .ql-editor {
+          color: #475569;
+        }
+        /* Color picker styling */
+        .ql-color .ql-picker-label, .ql-background .ql-picker-label {
+          padding: 0 !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          border: 1px solid #e2e8f0 !important;
+          border-radius: 0.5rem !important;
         }
         /* Active state for custom toolbar */
         #toolbar button.ql-active {
-          background-color: #ede9fe !important;
-          color: #7c3aed !important;
+          background-color: #8b5cf6 !important;
+          color: #ffffff !important;
+          box-shadow: 0 4px 6px -1px rgba(139, 92, 246, 0.3);
+        }
+        #toolbar .ql-picker-label.ql-active {
+          border-color: #8b5cf6 !important;
+          background-color: #f5f3ff !important;
+        }
+        /* Hide default Quill tooltips */
+        .ql-tooltip {
+          z-index: 1000 !important;
         }
       `}</style>
     </div>

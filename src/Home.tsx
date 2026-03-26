@@ -64,6 +64,14 @@ export const Home = ({
     }
   };
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    if (hour < 21) return "Good evening";
+    return "Good night";
+  };
+
   return (
     <div className="space-y-8">
       <header className="mb-12">
@@ -72,7 +80,7 @@ export const Home = ({
           animate={{ opacity: 1, x: 0 }}
           className="text-3xl font-serif text-slate-800"
         >
-          Good morning, {auth.currentUser?.displayName?.split(' ')[0]} 🌸
+          {getGreeting()}, {auth.currentUser?.displayName?.split(' ')[0]} 🌸
         </motion.h2>
         <p className="text-slate-500 mt-2 italic">How is your heart feeling today?</p>
       </header>

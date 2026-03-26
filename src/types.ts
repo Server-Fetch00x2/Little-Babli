@@ -17,7 +17,6 @@ export interface JournalEntry {
   userId: string;
   title: string;
   content: string;
-  mood: string;
   tags: string[];
   isLocked: boolean;
   isPinned?: boolean;

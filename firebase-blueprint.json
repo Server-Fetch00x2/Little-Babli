@@ -31,7 +31,6 @@
         "userId": { "type": "string" },
         "title": { "type": "string" },
         "content": { "type": "string" },
-        "mood": { "type": "string" },
         "tags": { "type": "array", "items": { "type": "string" } },
         "isLocked": { "type": "boolean" },
         "isPinned": { "type": "boolean" },

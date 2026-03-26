@@ -58,14 +58,14 @@ service cloud.firestore {
              data.userId is string && 
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
              data.content is string && data.content.size() < 100000 && // Increased for base64 images
-             data.mood is string &&
+             isValidOptionalString(data, 'mood', 100) &&
              data.tags is list && data.tags.size() <= 20 &&
              data.isLocked is bool &&
              isValidOptionalBool(data, 'isPinned') &&
              isValidOptionalString(data, 'pinHash', 100) &&
              isValidOptionalList(data, 'images', 50) &&
-             isValidOptionalString(data, 'createdAt', 50) &&
-             isValidOptionalString(data, 'updatedAt', 50);
+             (!( 'createdAt' in data ) || (data.createdAt is string || data.createdAt is timestamp)) &&
+             (!( 'updatedAt' in data ) || (data.updatedAt is string || data.updatedAt is timestamp));
     }
 
     function isValidMoodLog(data) {
@@ -111,7 +111,7 @@ service cloud.firestore {
     match /journals/{journalId} {
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidJournal(request.resource.data);
-      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && isValidJournal(request.resource.data);
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && request.resource.data.userId == request.auth.uid && isValidJournal(request.resource.data);
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
 
