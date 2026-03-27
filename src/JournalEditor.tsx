@@ -40,6 +40,7 @@ import { db, auth } from './lib/firebase';
 import { collection, addDoc, updateDoc, doc, getDoc } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from './lib/error-handler';
 import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 import { format } from 'date-fns';
 import { PasswordModal } from './components/PasswordModal';
 import { jsPDF } from 'jspdf';
@@ -216,9 +217,7 @@ export const JournalEditor = ({
   }, [quillRef.current]);
 
   const modules = React.useMemo(() => ({
-    toolbar: {
-      container: "#toolbar",
-    },
+    toolbar: false,
     clipboard: {
       matchVisual: false,
     }
@@ -338,87 +337,6 @@ export const JournalEditor = ({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
-
-            {/* Custom Toolbar */}
-            {!isPreview && (
-              <div id="toolbar" className="flex items-center gap-1 py-2 border-y border-lavender-100 mb-4 overflow-x-auto scrollbar-hide bg-white/50 backdrop-blur-sm sticky top-[72px] z-[5] px-2">
-                <button className="ql-bold w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" title="Bold">
-                  <Bold size={18} />
-                </button>
-                <button className="ql-italic w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" title="Italic">
-                  <Italic size={18} />
-                </button>
-                <button className="ql-underline w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" title="Underline">
-                  <Underline size={18} />
-                </button>
-                <button className="ql-strike w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" title="Strikethrough">
-                  <Strikethrough size={18} />
-                </button>
-                
-                <div className="w-px h-6 bg-lavender-100 mx-1" />
-                
-                <div className="flex items-center gap-1">
-                  <select className="ql-color !w-8 !h-8 !p-0 border-none bg-transparent cursor-pointer" title="Text Color" />
-                  <select className="ql-background !w-8 !h-8 !p-0 border-none bg-transparent cursor-pointer" title="Background Color" />
-                </div>
-                
-                <div className="w-px h-6 bg-lavender-100 mx-1" />
-                
-                <button className="ql-header w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" value="1" title="Heading 1">
-                  <Heading1 size={18} />
-                </button>
-                <button className="ql-header w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" value="2" title="Heading 2">
-                  <Heading2 size={18} />
-                </button>
-                
-                <div className="w-px h-6 bg-lavender-100 mx-1" />
-                
-                <button className="ql-list w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" value="ordered" title="Ordered List">
-                  <ListIcon size={18} />
-                </button>
-                <button className="ql-list w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" value="bullet" title="Bullet List">
-                  <ListIcon size={18} className="rotate-180" />
-                </button>
-                
-                <div className="w-px h-6 bg-lavender-100 mx-1" />
-
-                <button className="ql-align w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" value="" title="Align Left">
-                  <AlignLeft size={18} />
-                </button>
-                <button className="ql-align w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" value="center" title="Align Center">
-                  <AlignCenter size={18} />
-                </button>
-                <button className="ql-align w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" value="right" title="Align Right">
-                  <AlignRight size={18} />
-                </button>
-
-                <div className="w-px h-6 bg-lavender-100 mx-1" />
-                
-                <button className="ql-blockquote w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" title="Quote">
-                  <Quote size={18} />
-                </button>
-                <button className="ql-code-block w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" title="Code Block">
-                  <Code size={18} />
-                </button>
-                <button className="ql-link w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" title="Link">
-                  <LinkIcon size={18} />
-                </button>
-                
-                <div className="w-px h-6 bg-lavender-100 mx-1" />
-                
-                <button 
-                  onClick={handleImageUpload}
-                  className="w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all"
-                  title="Insert Image"
-                >
-                  <ImageIcon size={18} className="text-lavender-500" />
-                </button>
-                
-                <button className="ql-clean w-10 h-10 flex items-center justify-center hover:bg-lavender-50 rounded-full text-slate-600 transition-all" title="Clear Formatting">
-                  <Eraser size={18} />
-                </button>
-              </div>
-            )}
 
             <div className={clsx("editor-container min-h-[500px]", isPreview && "preview-mode")}>
               <ReactQuill
