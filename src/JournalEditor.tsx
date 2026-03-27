@@ -263,7 +263,35 @@ export const JournalEditor = ({
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(12);
       pdf.setTextColor(51, 65, 85); // slate-700
-      const splitContent = pdf.splitTextToSize(plainText, contentWidth);
+      
+      // Manual word wrap to ensure words are not split
+      const wrapText = (text: string, maxWidth: number) => {
+        const paragraphs = text.split('\n');
+        const allLines: string[] = [];
+        
+        paragraphs.forEach(paragraph => {
+          const words = paragraph.split(/\s+/);
+          let currentLine = '';
+          
+          words.forEach(word => {
+            if (!word) return;
+            const testLine = currentLine ? `${currentLine} ${word}` : word;
+            const width = pdf.getTextWidth(testLine);
+            if (width <= maxWidth) {
+              currentLine = testLine;
+            } else {
+              if (currentLine) allLines.push(currentLine);
+              currentLine = word;
+            }
+          });
+          if (currentLine) allLines.push(currentLine);
+          else if (paragraph === '') allLines.push(''); // Preserve empty lines
+        });
+        
+        return allLines;
+      };
+
+      const splitContent = wrapText(plainText, contentWidth);
       
       const pageHeight = pdf.internal.pageSize.getHeight();
       splitContent.forEach((line: string) => {

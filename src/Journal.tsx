@@ -206,12 +206,38 @@ export const Journal = ({ onEditEntry, onNewEntry }: {
         return currentY;
       };
 
+      const wrapText = (text: string, maxWidth: number) => {
+        const paragraphs = text.split('\n');
+        const allLines: string[] = [];
+        
+        paragraphs.forEach(paragraph => {
+          const words = paragraph.split(/\s+/);
+          let currentLine = '';
+          
+          words.forEach(word => {
+            if (!word) return;
+            const testLine = currentLine ? `${currentLine} ${word}` : word;
+            const width = pdf.getTextWidth(testLine);
+            if (width <= maxWidth) {
+              currentLine = testLine;
+            } else {
+              if (currentLine) allLines.push(currentLine);
+              currentLine = word;
+            }
+          });
+          if (currentLine) allLines.push(currentLine);
+          else if (paragraph === '') allLines.push('');
+        });
+        
+        return allLines;
+      };
+
       const processNode = async (node: Node, y: number): Promise<number> => {
         let nextY = y;
         if (node.nodeType === Node.TEXT_NODE) {
           const text = node.textContent?.trim();
           if (text) {
-            const lines = pdf.splitTextToSize(text, contentWidth);
+            const lines = wrapText(text, contentWidth);
             for (const line of lines) {
               nextY = checkPageBreak(7, nextY);
               pdf.text(line, margin, nextY);
@@ -236,7 +262,7 @@ export const Journal = ({ onEditEntry, onNewEntry }: {
             pdf.setFont('times', 'bold');
             const fontSize = element.tagName === 'H1' ? 16 : 14;
             pdf.setFontSize(fontSize);
-            const lines = pdf.splitTextToSize(element.innerText, contentWidth);
+            const lines = wrapText(element.innerText, contentWidth);
             for (const line of lines) {
               nextY = checkPageBreak(fontSize / 2 + 5, nextY);
               pdf.text(line, margin, nextY);
@@ -276,7 +302,7 @@ export const Journal = ({ onEditEntry, onNewEntry }: {
         pdf.setFont('times', 'bold');
         pdf.setFontSize(22);
         pdf.setTextColor(31, 41, 55);
-        const splitTitle = pdf.splitTextToSize(entry.title, contentWidth);
+        const splitTitle = wrapText(entry.title, contentWidth);
         pdf.text(splitTitle, margin, currentY);
         currentY += (splitTitle.length * 10) + 5;
 
@@ -476,7 +502,7 @@ export const Journal = ({ onEditEntry, onNewEntry }: {
                           {entry.isPinned && <Pin size={14} className="text-amber-500 fill-amber-500" />}
                         </div>
                         
-                        <div className="flex items-center gap-4 text-xs text-slate-400 mb-4">
+                        <div className="flex items-center gap-4 text-xs text-slate-400 mb-2">
                           <span className="flex items-center gap-1">
                             <CalendarIcon size={12} />
                             {format(new Date(entry.createdAt), 'MMM d, yyyy')}
@@ -491,12 +517,17 @@ export const Journal = ({ onEditEntry, onNewEntry }: {
 
                         <div className="flex gap-4">
                           {firstImage && !entry.isLocked && (
-                            <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 border border-lavender-100">
+                            <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border border-lavender-100">
                               <img src={firstImage} alt="Preview" className="w-full h-full object-cover" />
                             </div>
                           )}
-                          <p className="text-slate-600 line-clamp-3 leading-relaxed flex-1">
-                            {entry.isLocked ? 'This entry is private and locked.' : stripHtml(entry.content)}
+                          <p className="text-slate-600 line-clamp-1 leading-relaxed flex-1 text-sm">
+                            {entry.isLocked 
+                              ? 'This entry is private and locked.' 
+                              : stripHtml(entry.content).length > 50 
+                                ? stripHtml(entry.content).substring(0, 50) + '...' 
+                                : stripHtml(entry.content)
+                            }
                           </p>
                         </div>
                       </div>

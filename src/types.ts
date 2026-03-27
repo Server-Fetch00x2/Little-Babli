@@ -62,10 +62,10 @@ export interface Habit {
 }
 
 export const MOODS = [
-  { emoji: '🌸', label: 'Peaceful', color: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-200' },
-  { emoji: '☀️', label: 'Happy', color: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-200' },
-  { emoji: '☁️', label: 'Neutral', color: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200' },
-  { emoji: '🌧️', label: 'Sad', color: 'bg-sky-100', text: 'text-sky-700', border: 'border-sky-200' },
-  { emoji: '🌙', label: 'Tired', color: 'bg-violet-100', text: 'text-violet-700', border: 'border-violet-200' },
-  { emoji: '✨', label: 'Inspired', color: 'bg-rose-100', text: 'text-rose-700', border: 'border-rose-200' },
+  { emoji: '😌', label: 'Peaceful', color: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-200' },
+  { emoji: '😗', label: 'Happy', color: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-200' },
+  { emoji: '🙂', label: 'Neutral', color: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200' },
+  { emoji: '🥲', label: 'Sad', color: 'bg-sky-100', text: 'text-sky-700', border: 'border-sky-200' },
+  { emoji: '😴', label: 'Tired', color: 'bg-violet-100', text: 'text-violet-700', border: 'border-violet-200' },
+  { emoji: '😃', label: 'Inspired', color: 'bg-rose-100', text: 'text-rose-700', border: 'border-rose-200' },
 ];
